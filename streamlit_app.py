@@ -60,7 +60,7 @@ if csv_file:
     # Perform sentiment analysis
     analyzer = SentimentAnalyzer()
 
-        if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
+    if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
         # Sentiment columns match the expected ones
     
         # Initialize lists to store sentiment scores and labels
