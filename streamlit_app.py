@@ -83,7 +83,16 @@ if csv_file:
             st.subheader(f"{column.capitalize()} Sentiment Breakdown")
             breakdown_df = pd.DataFrame(analyzed_sentiments)
             st.write(breakdown_df)
+        # Visualize sentiment breakdown for every row with the 'teaching' aspect
+        st.subheader("Sentiment Breakdown for Every Row with 'Teaching' Aspect")
+        for index, row in df.iterrows():
+            teaching_review = row['teaching']
+            teaching_sentiments = analyzer.analyze_sentiment([teaching_review])
+            teaching_description, teaching_trend = analyzer.interpret_sentiment(teaching_sentiments)
     
+            st.write(f"**Row {index+1} - Teaching Sentiment Breakdown**")
+            breakdown_df_teaching = pd.DataFrame(teaching_sentiments)
+            st.write(breakdown_df_teaching)
         # Split data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(all_reviews, sentiment_labels, test_size=0.2, random_state=42)
 
