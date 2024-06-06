@@ -105,6 +105,46 @@ if csv_file:
         accuracy = accuracy_score(y_test, y_pred)
         st.write(f"Prediction Accuracy: {accuracy}")
 
+    elif len(df.columns) >= 7 and df.columns[0].lower() == 'student' and all(col.lower().startswith('week') for col in df.columns[1:]):
+        # Data structure suggests weekly sentiment analysis
+        # Initialize lists to store sentiment scores and labels
+        all_reviews = []
+        sentiment_labels = []
+
+        # Analyze sentiment for each week
+        weekly_sentiments = {}
+        for column in df.columns[1:]:
+            weekly_reviews = df[column].dropna().astype(str).tolist()
+            all_reviews.extend(weekly_reviews)
+            analyzed_sentiments = analyzer.analyze_sentiment(weekly_reviews)
+
+            # Store weekly sentiments for visualization
+            weekly_sentiments[column] = analyzed_sentiments
+
+            # Extract compound scores and determine sentiment labels (binary classification)
+            compound_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
+            weekly_labels = [1 if score > 5 else 0 for score in compound_scores]
+            sentiment_labels.extend(weekly_labels)
+
+        # Split data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(all_reviews, sentiment_labels, test_size=0.2, random_state=42)
+
+        # Convert text data to numeric using CountVectorizer
+        vectorizer = CountVectorizer()
+        X_train_vectorized = vectorizer.fit_transform(X_train)
+        X_test_vectorized = vectorizer.transform(X_test)
+
+        # Train Naive Bayes classifier
+        clf = MultinomialNB()
+        clf.fit(X_train_vectorized, y_train)
+
+        # Make predictions
+        y_pred = clf.predict(X_test_vectorized)
+
+        # Output prediction accuracy
+        accuracy = accuracy_score(y_test, y_pred)
+        st.write(f"Prediction Accuracy: {accuracy}")
+        
     else:
         st.write("Columns mismatch. Please ensure the CSV file contains the required columns.")
 
