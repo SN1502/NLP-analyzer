@@ -101,10 +101,6 @@ if csv_file:
         # Make predictions
         y_pred = clf.predict(X_test_vectorized)
 
-        # Output prediction accuracy
-        accuracy = accuracy_score(y_test, y_pred)
-        st.write(f"Prediction Accuracy: {accuracy}")
-
     elif len(df.columns) >= 7 and df.columns[0].lower() == 'student' and all(col.lower().startswith('week') for col in df.columns[1:]):
         # Data structure suggests weekly sentiment analysis
         # Initialize lists to store sentiment scores and labels
