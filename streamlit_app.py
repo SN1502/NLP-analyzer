@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+import seaborn as sns
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import nltk
 from sklearn.feature_extraction.text import CountVectorizer
@@ -68,10 +69,14 @@ if csv_file:
     sentiment_labels = []
 
     # Analyze sentiment for each week
+    weekly_sentiments = {}
     for column in sentiment_columns:
         weekly_reviews = df[column].dropna().astype(str).tolist()
         all_reviews.extend(weekly_reviews)
         analyzed_sentiments = analyzer.analyze_sentiment(weekly_reviews)
+
+        # Store weekly sentiments for visualization
+        weekly_sentiments[column] = analyzed_sentiments
 
         # Extract compound scores and determine sentiment labels (binary classification)
         compound_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
@@ -96,6 +101,18 @@ if csv_file:
     # Calculate accuracy
     accuracy = accuracy_score(y_test, y_pred)
     st.write(f"Accuracy: {accuracy}")
+
+    # Visualize sentiment distribution for each week
+    st.subheader("Sentiment Distribution per Week")
+    fig, axes = plt.subplots(len(sentiment_columns), 1, figsize=(10, 6 * len(sentiment_columns)))
+    if len(sentiment_columns) == 1:
+        axes = [axes]
+    for ax, (column, sentiments) in zip(axes, weekly_sentiments.items()):
+        sns.histplot([sentiment['compound'] for sentiment in sentiments], bins=10, kde=True, ax=ax)
+        ax.set_title(f"Sentiment Distribution for {column}")
+        ax.set_xlabel("Sentiment Score")
+        ax.set_ylabel("Frequency")
+    st.pyplot(fig)
 
     # Analyze all concatenated reviews for overall interpretation
     overall_sentiments = analyzer.analyze_sentiment(all_reviews)
