@@ -97,9 +97,6 @@ if csv_file:
     # Make predictions
     y_pred = clf.predict(X_test_vectorized)
 
-    # Calculate accuracy
-    accuracy = accuracy_score(y_test, y_pred)
-    st.write(f"Accuracy: {accuracy}")
 
     # Plotting sentiment trends
     weeks = list(range(1, len(sentiment_columns) + 1))
