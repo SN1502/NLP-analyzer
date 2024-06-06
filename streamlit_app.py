@@ -60,30 +60,30 @@ if csv_file:
     # Perform sentiment analysis
     analyzer = SentimentAnalyzer()
 
-     if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
+        if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
         # Sentiment columns match the expected ones
-
+    
         # Initialize lists to store sentiment scores and labels
         all_reviews = []
         sentiment_labels = []
-
+    
         # Analyze sentiment for each aspect
         aspect_columns = ['teaching', 'coursecontent', 'examination', 'labwork', 'library_facilities', 'extracurricular']
         for column in aspect_columns:
             aspect_reviews = df[column].dropna().astype(str).tolist()
             all_reviews.extend(aspect_reviews)
             analyzed_sentiments = analyzer.analyze_sentiment(aspect_reviews)
-
+    
             # Extract compound scores and determine sentiment labels (binary classification)
             compound_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
             aspect_labels = [1 if score > 5 else 0 for score in compound_scores]
             sentiment_labels.extend(aspect_labels)
-
+    
             # Output sentiment breakdown for each aspect
             st.subheader(f"{column.capitalize()} Sentiment Breakdown")
             breakdown_df = pd.DataFrame(analyzed_sentiments)
             st.write(breakdown_df)
-
+    
         # Split data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(all_reviews, sentiment_labels, test_size=0.2, random_state=42)
 
@@ -92,50 +92,50 @@ if csv_file:
         # Initialize lists to store sentiment scores and labels
         all_reviews = []
         sentiment_labels = []
-    
+        
         # Analyze sentiment for each week
         weekly_sentiments = {}
         for column in df.columns[1:]:
             weekly_reviews = df[column].dropna().astype(str).tolist()
             all_reviews.extend(weekly_reviews)
             analyzed_sentiments = analyzer.analyze_sentiment(weekly_reviews)
-    
+        
             # Store weekly sentiments for visualization
             weekly_sentiments[column] = analyzed_sentiments
-    
+        
             # Extract compound scores and determine sentiment labels (binary classification)
             compound_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
             weekly_labels = [1 if score > 5 else 0 for score in compound_scores]
             sentiment_labels.extend(weekly_labels)
-    
+        
         # Plotting sentiment trends
         weeks = list(range(1, len(df.columns)))
         sentiment_scores = [sum([sentiment['compound'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in df.columns[1:]]
         pos_scores = [sum([sentiment['pos'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in df.columns[1:]]
         neu_scores = [sum([sentiment['neu'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in df.columns[1:]]
         neg_scores = [sum([sentiment['neg'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in df.columns[1:]]
-    
+        
         fig, ax = plt.subplots()
         ax.plot(weeks, sentiment_scores, label="Overall", color="blue")
         ax.fill_between(weeks, sentiment_scores, color="blue", alpha=0.1)
         ax.plot(weeks, pos_scores, label="Positive", color="green")
         ax.plot(weeks, neu_scores, label="Neutral", color="gray")
         ax.plot(weeks, neg_scores, label="Negative", color="red")
-    
+        
         ax.set_xlabel('Week')
         ax.set_ylabel('Sentiment Score')
         ax.set_title('Sentiment Trend Over Weeks')
         ax.legend()
         st.pyplot(fig)
-    
+        
         # Analyze all concatenated reviews for overall interpretation
         overall_sentiments = analyzer.analyze_sentiment(all_reviews)
         description, trend = analyzer.interpret_sentiment(overall_sentiments)
-    
+        
         st.subheader("Progress Description")
         st.write(f"Sentiment Trend: {trend}")
         st.write(f"Description: {description}")
-    
+        
         # Breakdown of analysis
         st.subheader("Breakdown of Analysis")
         breakdown_df = pd.DataFrame(overall_sentiments)
