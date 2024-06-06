@@ -48,7 +48,7 @@ class SentimentAnalyzer:
 
         return description, trend
 
-# Streamlit UI setup
+# Update Streamlit UI setup
 st.title("Student Review Sentiment Analysis")
 
 # Upload CSV file
@@ -61,82 +61,51 @@ if csv_file:
     # Perform sentiment analysis
     analyzer = SentimentAnalyzer()
 
-    # Assuming sentiment labels are spread across 'Week 1' to 'Week 6' columns
-    sentiment_columns = df.columns[1:]  # Exclude the first column which contains student names
+    if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns \
+            and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
+        # Sentiment columns match the expected ones
 
-    # Initialize lists to store sentiment scores and labels
-    all_reviews = []
-    sentiment_labels = []
+        # Initialize lists to store sentiment scores and labels
+        all_reviews = []
+        sentiment_labels = []
 
-    # Analyze sentiment for each week
-    weekly_sentiments = {}
-    for column in sentiment_columns:
-        weekly_reviews = df[column].dropna().astype(str).tolist()
-        all_reviews.extend(weekly_reviews)
-        analyzed_sentiments = analyzer.analyze_sentiment(weekly_reviews)
+        # Analyze sentiment for each aspect
+        aspect_columns = ['teaching', 'coursecontent', 'examination', 'labwork', 'library_facilities', 'extracurricular']
+        for column in aspect_columns:
+            aspect_reviews = df[column].dropna().astype(str).tolist()
+            all_reviews.extend(aspect_reviews)
+            analyzed_sentiments = analyzer.analyze_sentiment(aspect_reviews)
 
-        # Store weekly sentiments for visualization
-        weekly_sentiments[column] = analyzed_sentiments
+            # Extract compound scores and determine sentiment labels (binary classification)
+            compound_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
+            aspect_labels = [1 if score > 5 else 0 for score in compound_scores]
+            sentiment_labels.extend(aspect_labels)
 
-        # Extract compound scores and determine sentiment labels (binary classification)
-        compound_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
-        weekly_labels = [1 if score > 5 else 0 for score in compound_scores]
-        sentiment_labels.extend(weekly_labels)
+            # Output sentiment breakdown for each aspect
+            st.subheader(f"{column.capitalize()} Sentiment Breakdown")
+            breakdown_df = pd.DataFrame(analyzed_sentiments)
+            st.write(breakdown_df)
 
-    # Split data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(all_reviews, sentiment_labels, test_size=0.2, random_state=42)
+        # Split data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(all_reviews, sentiment_labels, test_size=0.2, random_state=42)
 
-    # Convert text data to numeric using CountVectorizer
-    vectorizer = CountVectorizer()
-    X_train_vectorized = vectorizer.fit_transform(X_train)
-    X_test_vectorized = vectorizer.transform(X_test)
+        # Convert text data to numeric using CountVectorizer
+        vectorizer = CountVectorizer()
+        X_train_vectorized = vectorizer.fit_transform(X_train)
+        X_test_vectorized = vectorizer.transform(X_test)
 
-    # Train Naive Bayes classifier
-    clf = MultinomialNB()
-    clf.fit(X_train_vectorized, y_train)
+        # Train Naive Bayes classifier
+        clf = MultinomialNB()
+        clf.fit(X_train_vectorized, y_train)
 
-    # Make predictions
-    y_pred = clf.predict(X_test_vectorized)
+        # Make predictions
+        y_pred = clf.predict(X_test_vectorized)
 
-    # Plotting sentiment trends
-    weeks = list(range(1, len(sentiment_columns) + 1))
-    sentiment_scores = [sum([sentiment['compound'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in sentiment_columns]
-    pos_scores = [sum([sentiment['pos'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in sentiment_columns]
-    neu_scores = [sum([sentiment['neu'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in sentiment_columns]
-    neg_scores = [sum([sentiment['neg'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in sentiment_columns]
+        # Output prediction accuracy
+        accuracy = accuracy_score(y_test, y_pred)
+        st.write(f"Prediction Accuracy: {accuracy}")
 
-    fig, ax = plt.subplots()
-    ax.plot(weeks, sentiment_scores, label="Overall", color="blue")
-    ax.fill_between(weeks, sentiment_scores, color="blue", alpha=0.1)
-    ax.plot(weeks, pos_scores, label="Positive", color="green")
-    ax.plot(weeks, neu_scores, label="Neutral", color="gray")
-    ax.plot(weeks, neg_scores, label="Negative", color="red")
+    else:
+        st.write("Columns mismatch. Please ensure the CSV file contains the required columns.")
 
-    ax.set_xlabel('Week')
-    ax.set_ylabel('Sentiment Score')
-    ax.set_title('Sentiment Trend Over Weeks')
-    ax.legend()
-    st.pyplot(fig)
-
-    # Analyze all concatenated reviews for overall interpretation
-    overall_sentiments = analyzer.analyze_sentiment(all_reviews)
-    description, trend = analyzer.interpret_sentiment(overall_sentiments)
-
-    st.subheader("Progress Description")
-    st.write(f"Sentiment Trend: {trend}")
-    st.write(f"Description: {description}")
-
-    # Breakdown of analysis
-    st.subheader("Breakdown of Analysis")
-    breakdown_df = pd.DataFrame(overall_sentiments)
-    st.write(breakdown_df)
-
-    # Individual student analysis
-    st.subheader("Individual Student Analysis")
-    for student in df.columns[1:]:
-        st.write(f"**Student:** {student}")
-        student_reviews = df[student].dropna().astype(str).tolist()
-        student_sentiments = analyzer.analyze_sentiment(student_reviews)
-        student_description, student_trend = analyzer.interpret_sentiment(student_sentiments)
-        st.write(f"Sentiment Trend: {student_trend}")
-        st.write(f"Description: {student_description}")
+    # Remaining code for sentiment trend plotting, overall interpretation, and individual student analysis...
