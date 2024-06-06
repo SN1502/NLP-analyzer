@@ -60,20 +60,44 @@ if csv_file:
     # Perform sentiment analysis
     analyzer = SentimentAnalyzer()
 
-    # Extracting relevant columns for sentiment analysis
-    relevant_columns = ['Teacher Feedback', 'Course Content', 'Examination pattern', 'Laboratory', 'Library Facilities', 'Extra Co-Curricular Activities', 'Any other suggestion']
+    # Assuming sentiment labels are spread across 'Teacher Feedback' to 'Any other suggestion' columns
+    sentiment_columns = df.columns[5:]  # Exclude the first columns which are not review texts
 
-    # Combine all feedback columns into one
-    df['Combined Feedback'] = df[relevant_columns].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+    # Initialize lists to store sentiment scores and labels
+    all_reviews = []
+    sentiment_labels = []
 
-    # Analyze sentiment for the combined feedback
-    all_reviews = df['Combined Feedback'].tolist()
+    # Analyze sentiment for each column
+    for column in sentiment_columns:
+        column_reviews = df[column].dropna().astype(str).tolist()
+        all_reviews.extend(column_reviews)
+        analyzed_sentiments = analyzer.analyze_sentiment(column_reviews)
+
+        # Extract compound scores and determine sentiment labels (binary classification)
+        compound_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
+        column_labels = [1 if score > 5 else 0 for score in compound_scores]
+        sentiment_labels.extend(column_labels)
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(all_reviews, sentiment_labels, test_size=0.2, random_state=42)
+
+    # Convert text data to numeric using CountVectorizer
+    vectorizer = CountVectorizer()
+    X_train_vectorized = vectorizer.fit_transform(X_train)
+    X_test_vectorized = vectorizer.transform(X_test)
+
+    # Train Naive Bayes classifier
+    clf = MultinomialNB()
+    clf.fit(X_train_vectorized, y_train)
+
+    # Make predictions
+    y_pred = clf.predict(X_test_vectorized)
+
+    # Analyze all concatenated reviews for overall interpretation
     overall_sentiments = analyzer.analyze_sentiment(all_reviews)
-
-    # Interpret overall sentiment
     description, trend = analyzer.interpret_sentiment(overall_sentiments)
 
-    st.subheader("Overall Analysis")
+    st.subheader("Progress Description")
     st.write(f"Sentiment Trend: {trend}")
     st.write(f"Description: {description}")
 
@@ -82,12 +106,15 @@ if csv_file:
     breakdown_df = pd.DataFrame(overall_sentiments)
     st.write(breakdown_df)
 
-    # Individual student analysis
-    st.subheader("Individual Student Analysis")
-    for index, row in df.iterrows():
-        st.write(f"**Student:** {row['Name']}")
-        student_reviews = [row[column] for column in relevant_columns]
-        student_sentiments = analyzer.analyze_sentiment(student_reviews)
-        student_description, student_trend = analyzer.interpret_sentiment(student_sentiments)
-        st.write(f"Sentiment Trend: {student_trend}")
-        st.write(f"Description: {student_description}")
+    # Plotting sentiment trends
+    if len(sentiment_columns) > 1:
+        st.subheader("Sentiment Trends Over Columns")
+        fig, ax = plt.subplots()
+        for column in sentiment_columns:
+            column_sentiments = [sentiment['compound'] for sentiment in analyzer.analyze_sentiment(df[column].dropna().astype(str).tolist())]
+            ax.plot(range(len(column_sentiments)), column_sentiments, label=column)
+        ax.set_xlabel('Review Index')
+        ax.set_ylabel('Sentiment Score')
+        ax.set_title('Sentiment Trend Over Columns')
+        ax.legend()
+        st.pyplot(fig)
