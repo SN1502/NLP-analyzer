@@ -63,29 +63,30 @@ if csv_file:
     analyzer = SentimentAnalyzer()
 
     if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
-        # Sentiment columns match the expected ones
+            # Sentiment columns match the expected ones
+    
+            # Initialize lists to store sentiment scores and labels
+            all_reviews = []
+    
+            # Analyze sentiment for each aspect
+            aspect_columns = ['teaching', 'coursecontent', 'examination', 'labwork', 'library_facilities', 'extracurricular']
+            for column in aspect_columns:
+                aspect_reviews = df[column].astype(str).tolist()
+                all_reviews.extend(aspect_reviews)
+    
+            # Visualization
+            for column in aspect_columns:
+                analyzed_sentiments = analyzer.analyze_sentiment(df[column].astype(str).tolist())
+                sentiment_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
+                weeks = range(1, len(sentiment_scores) + 1)
+                plt.plot(weeks, sentiment_scores, label=column.capitalize())
+    
+            plt.xlabel('Week')
+            plt.ylabel('Sentiment Score')
+            plt.title('Sentiment Trends for Each Aspect Over Weeks')
+            plt.legend()
+            st.pyplot()
 
-        # Initialize lists to store sentiment scores and labels
-        all_reviews = []
-
-        # Analyze sentiment for each aspect
-        aspect_columns = ['teaching', 'coursecontent', 'examination', 'labwork', 'library_facilities', 'extracurricular']
-        for column in aspect_columns:
-            aspect_reviews = df[column].astype(str).tolist()
-            all_reviews.extend(aspect_reviews)
-
-        # Visualization
-        for column in aspect_columns:
-            analyzed_sentiments = analyzer.analyze_sentiment(df[column].astype(str).tolist())
-            sentiment_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
-            weeks = range(1, len(sentiment_scores) + 1)
-            plt.plot(weeks, sentiment_scores, label=column.capitalize())
-
-        plt.xlabel('Week')
-        plt.ylabel('Sentiment Score')
-        plt.title('Sentiment Trends for Each Aspect Over Weeks')
-        plt.legend()
-        st.pyplot()
     elif len(df.columns) >= 7 and df.columns[0].lower() == 'student' and all(col.lower().startswith('week') for col in df.columns[1:]):
         # Data structure suggests weekly sentiment analysis
         # Initialize lists to store sentiment scores and labels
