@@ -63,7 +63,21 @@ if csv_file:
     analyzer = SentimentAnalyzer()
 
     if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
-            # Sentiment columns match the expected ones
+            review_columns = df.columns[1::2]  # 
+        reviews = df[review_columns].values.flatten().tolist()
+
+        analyzer = SentimentAnalyzer()
+
+        review_period = st.selectbox("Review Period:", [1, 4])
+
+        if review_period == 1:
+            sentiments = analyzer.analyze_sentiment(reviews)
+        else:
+            sentiments = analyzer.analyze_periodic_sentiment(reviews, review_period)
+
+        overall_sentiment = analyzer.calculate_overall_sentiment(reviews)
+        st.subheader(f"Overall Sentiment: {overall_sentiment:.2f}")
+        st.subheader("Sentiment Analysis")
     
             # Initialize lists to store sentiment scores and labels
             all_reviews = []
