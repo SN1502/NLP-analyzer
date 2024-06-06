@@ -77,22 +77,22 @@ if csv_file:
     # Map sentiment labels to integers for training
     # You can adjust this mapping based on your sentiment classification needs
     sentiment_labels = {'positive': 1, 'neutral': 0, 'negative': -1}
-    y = [sentiment_labels[sentiment.lower()] for sentiment in df['Sentiment']]
-    
+    y = [sentiment_labels[sentiment.lower()] for sentiment in df.columns[1:]]
+
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(sentiments, y, test_size=0.2, random_state=42)
-    
+
     # Train Naive Bayes classifier
     clf = MultinomialNB()
     clf.fit(X_train, y_train)
-    
+
     # Make predictions
     y_pred = clf.predict(X_test)
-    
+
     # Calculate accuracy
     accuracy = accuracy_score(y_test, y_pred)
     st.write(f"Accuracy: {accuracy}")
-    
+
     # Visualization (if needed)
     # ...
 
