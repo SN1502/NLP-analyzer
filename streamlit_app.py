@@ -114,6 +114,26 @@ if csv_file:
         ax.set_ylabel("Frequency")
     st.pyplot(fig)
 
+    # Plotting sentiment trends
+    weeks = list(range(1, len(sentiment_columns) + 1))
+    sentiment_scores = [sum([sentiment['compound'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in sentiment_columns]
+    pos_scores = [sum([sentiment['pos'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in sentiment_columns]
+    neu_scores = [sum([sentiment['neu'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in sentiment_columns]
+    neg_scores = [sum([sentiment['neg'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in sentiment_columns]
+
+    fig, ax = plt.subplots()
+    ax.plot(weeks, sentiment_scores, label="Overall", color="blue")
+    ax.fill_between(weeks, sentiment_scores, color="blue", alpha=0.1)
+    ax.plot(weeks, pos_scores, label="Positive", color="green")
+    ax.plot(weeks, neu_scores, label="Neutral", color="gray")
+    ax.plot(weeks, neg_scores, label="Negative", color="red")
+
+    ax.set_xlabel('Week')
+    ax.set_ylabel('Sentiment Score')
+    ax.set_title('Sentiment Trend Over Weeks')
+    ax.legend()
+    st.pyplot(fig)
+
     # Analyze all concatenated reviews for overall interpretation
     overall_sentiments = analyzer.analyze_sentiment(all_reviews)
     description, trend = analyzer.interpret_sentiment(overall_sentiments)
