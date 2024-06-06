@@ -62,48 +62,52 @@ if csv_file:
     analyzer = SentimentAnalyzer()
 
     if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
-        # Sentiment columns match the expected ones
-
-        # Initialize lists to store sentiment scores and labels
-        all_reviews = []
-        sentiment_labels = []
-
-        # Initialize dictionaries to store sentiment trends for each aspect
-        aspect_sentiments = {}
-        aspect_labels = {}
+        # Assuming the new dataset structure without a 'Branch' column
+        review_columns = df.columns[1::2]  # Adjust column selection to match the provided dataset structure
+        reviews = df[review_columns].values.flatten().tolist()
         
-        # Analyze sentiment for each aspect
-        aspect_columns = ['teaching', 'coursecontent', 'examination', 'labwork', 'library_facilities', 'extracurricular']
-        for column in aspect_columns:
-            aspect_reviews = df[column].dropna().astype(str).tolist()
-            all_reviews.extend(aspect_reviews)
-            analyzed_sentiments = analyzer.analyze_sentiment(aspect_reviews)
-            aspect_sentiments[column] = analyzed_sentiments
-            
-            # Extract compound scores and determine sentiment labels (binary classification)
-            compound_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
-            aspect_labels[column] = [1 if score > 5 else 0 for score in compound_scores]
-            sentiment_labels.extend(aspect_labels[column])
-
-            # Output sentiment breakdown for each aspect
-            st.subheader(f"{column.capitalize()} Sentiment Breakdown")
-            breakdown_df = pd.DataFrame(analyzed_sentiments)
-            st.write(breakdown_df)
-
-            # Plot sentiment trend for each aspect
-            fig, ax = plt.subplots()
-            weeks = list(range(1, len(aspect_reviews)+1))
-            sentiment_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
-            ax.plot(weeks, sentiment_scores, label="Sentiment Score", color="blue")
-            ax.set_xlabel('Review Number')
-            ax.set_ylabel('Sentiment Score')
-            ax.set_title(f'{column.capitalize()} Sentiment Trend')
-            ax.legend()
-            st.pyplot(fig)
-
-        # Split data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(all_reviews, sentiment_labels, test_size=0.2, random_state=42)
-
+        analyzer = SentimentAnalyzer()
+        
+        review_period = st.selectbox("Review Period:", [1, 4])
+        
+        if review_period == 1:
+            sentiments = analyzer.analyze_sentiment(reviews)
+        else:
+            sentiments = analyzer.analyze_periodic_sentiment(reviews, review_period)
+        
+        overall_sentiment = analyzer.calculate_overall_sentiment(reviews)
+        st.subheader(f"Overall Sentiment: {overall_sentiment:.2f}")
+        st.subheader("Sentiment Analysis")
+        
+        # Plotting sentiment
+        weeks = list(range(1, len(sentiments) + 1))
+        sentiment_scores = [sentiment['compound'] for sentiment in sentiments]
+        pos_scores = [sentiment['pos'] for sentiment in sentiments]
+        neu_scores = [sentiment['neu'] for sentiment in sentiments]
+        neg_scores = [sentiment['neg'] for sentiment in sentiments]
+        
+        fig, ax = plt.subplots()
+        ax.plot(weeks, sentiment_scores, label="Overall", color="blue")
+        ax.fill_between(weeks, sentiment_scores, color="blue", alpha=0.1)
+        ax.plot(weeks, pos_scores, label="Positive", color="green")
+        ax.plot(weeks, neu_scores, label="Neutral", color="gray")
+        ax.plot(weeks, neg_scores, label="Negative", color="red")
+        
+        ax.set_xlabel('Week')
+        ax.set_ylabel('Sentiment Score')
+        ax.set_title('Sentiment Analysis')
+        ax.legend()
+        st.pyplot(fig)
+        
+        description, trend = analyzer.interpret_sentiment(sentiments)
+        st.subheader("Progress Description")
+        st.write(f"Sentiment Trend: {trend}")
+        st.write(f"Description: {description}")
+        
+        # Breakdown of analysis
+        st.subheader("Breakdown of Analysis")
+        breakdown_df = pd.DataFrame(sentiments, index=list(range(1, len(sentiments) + 1)))
+        st.write(breakdown_df)
 
     elif len(df.columns) >= 7 and df.columns[0].lower() == 'student' and all(col.lower().startswith('week') for col in df.columns[1:]):
         # Data structure suggests weekly sentiment analysis
