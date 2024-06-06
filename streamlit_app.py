@@ -67,19 +67,20 @@ if csv_file:
 
     # Perform sentiment analysis
     analyzer = SentimentAnalyzer()
-    review_columns = df.columns[5:]  # Assuming feedback starts from column index 5
-    reviews = df[review_columns].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1).tolist()
-    sentiments = analyzer.analyze_sentiment(reviews)
-    
-    # Convert sentiment scores into features for Naive Bayes classifier
-    X = [[sentiment['compound']] for sentiment in sentiments]
-    
+
+    # Assuming sentiment labels are spread across 'Week 1' to 'Week 6' columns
+    sentiment_columns = df.columns[1:]  # Exclude the first column which contains student names
+
+    # Concatenate sentiment data from all columns into a single list
+    sentiments = df[sentiment_columns].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1).tolist()
+
     # Map sentiment labels to integers for training
+    # You can adjust this mapping based on your sentiment classification needs
     sentiment_labels = {'positive': 1, 'neutral': 0, 'negative': -1}
-    y = df['Sentiment'].map(sentiment_labels)
+    y = [sentiment_labels[sentiment.lower()] for sentiment in df['Sentiment']]
     
     # Split data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(sentiments, y, test_size=0.2, random_state=42)
     
     # Train Naive Bayes classifier
     clf = MultinomialNB()
@@ -103,6 +104,5 @@ if csv_file:
 
     # Breakdown of analysis
     st.subheader("Breakdown of Analysis")
-    breakdown_df = pd.DataFrame(sentiments, index=list(range(1, len(sentiments) + 1)))
+    breakdown_df = pd.DataFrame(sentiments, columns=sentiment_columns)
     st.write(breakdown_df)
-
