@@ -97,7 +97,6 @@ if csv_file:
     # Make predictions
     y_pred = clf.predict(X_test_vectorized)
 
-
     # Plotting sentiment trends
     weeks = list(range(1, len(sentiment_columns) + 1))
     sentiment_scores = [sum([sentiment['compound'] for sentiment in weekly_sentiments[column]]) / len(weekly_sentiments[column]) for column in sentiment_columns]
@@ -130,3 +129,13 @@ if csv_file:
     st.subheader("Breakdown of Analysis")
     breakdown_df = pd.DataFrame(overall_sentiments)
     st.write(breakdown_df)
+
+    # Individual student analysis
+    st.subheader("Individual Student Analysis")
+    for student in df.columns[1:]:
+        st.write(f"**Student:** {student}")
+        student_reviews = df[student].dropna().astype(str).tolist()
+        student_sentiments = analyzer.analyze_sentiment(student_reviews)
+        student_description, student_trend = analyzer.interpret_sentiment(student_sentiments)
+        st.write(f"Sentiment Trend: {student_trend}")
+        st.write(f"Description: {student_description}")
