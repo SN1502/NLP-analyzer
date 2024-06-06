@@ -1,4 +1,3 @@
-
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
@@ -12,7 +11,6 @@ import io
 
 # Downloading necessary NLTK data
 nltk.download('vader_lexicon')
-
 
 class SentimentAnalyzer:
     def __init__(self):
@@ -62,7 +60,34 @@ if csv_file:
     # Perform sentiment analysis
     analyzer = SentimentAnalyzer()
 
-    if len(df.columns) >= 7 and df.columns[0].lower() == 'student' and all(col.lower().startswith('week') for col in df.columns[1:]):
+     if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
+        # Sentiment columns match the expected ones
+
+        # Initialize lists to store sentiment scores and labels
+        all_reviews = []
+        sentiment_labels = []
+
+        # Analyze sentiment for each aspect
+        aspect_columns = ['teaching', 'coursecontent', 'examination', 'labwork', 'library_facilities', 'extracurricular']
+        for column in aspect_columns:
+            aspect_reviews = df[column].dropna().astype(str).tolist()
+            all_reviews.extend(aspect_reviews)
+            analyzed_sentiments = analyzer.analyze_sentiment(aspect_reviews)
+
+            # Extract compound scores and determine sentiment labels (binary classification)
+            compound_scores = [sentiment['compound'] for sentiment in analyzed_sentiments]
+            aspect_labels = [1 if score > 5 else 0 for score in compound_scores]
+            sentiment_labels.extend(aspect_labels)
+
+            # Output sentiment breakdown for each aspect
+            st.subheader(f"{column.capitalize()} Sentiment Breakdown")
+            breakdown_df = pd.DataFrame(analyzed_sentiments)
+            st.write(breakdown_df)
+
+        # Split data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(all_reviews, sentiment_labels, test_size=0.2, random_state=42)
+
+    elif len(df.columns) >= 7 and df.columns[0].lower() == 'student' and all(col.lower().startswith('week') for col in df.columns[1:]):
         # Data structure suggests weekly sentiment analysis
         # Initialize lists to store sentiment scores and labels
         all_reviews = []
@@ -126,80 +151,6 @@ if csv_file:
             st.write(f"Sentiment Trend: {student_trend}")
             st.write(f"Description: {student_description}")
 
-    elif "Student" in df.columns:
-    student_names = df["Student"].unique().tolist()
-    selected_student = st.selectbox("Select a Student:", ["All Students"] + student_names)
-    review_period = st.selectbox("Review Period:", [1, 4])
-
-    if selected_student != "All Students":
-        # Processing for individual student
-        student_data = df[df["Student"] == selected_student]
-        st.write(student_data)  # Debug statement to check the student_data
-        reviews = student_data.iloc[:, 1:].values.flatten().tolist()  # Assuming feedback starts from column index 1
-
-        # Train Naive Bayes model
-        X_train, X_test, y_train, y_test = train_test_split(reviews, student_data['target_column'], test_size=0.2, random_state=42)
-        model = make_pipeline(CountVectorizer(), MultinomialNB())
-        model.fit(X_train, y_train)
-
-        # Predicting sentiment
-        sentiments = model.predict(reviews)
-
-        # Interpret sentiments
-        description, trend = interpret_sentiment(sentiments)
-        st.subheader("Progress Description")
-        st.write(f"Sentiment Trend: {trend}")
-        st.write(f"Description: {description}")
-
-        # Breakdown of analysis
-        st.subheader("Breakdown of Analysis")
-        breakdown_df = pd.DataFrame({'Sentiment': sentiments}, index=list(range(1, len(sentiments) + 1)))
-        st.write(breakdown_df)
-
+        
     else:
-        # Processing for all students
-        all_students_data = []
-
-        for student in student_names:
-            student_data = df[df["Student"] == student]
-            reviews = student_data.iloc[:, 1:].values.flatten().tolist()  # Assuming feedback starts from column index 1
-
-            # Train Naive Bayes model
-            X_train, X_test, y_train, y_test = train_test_split(reviews, student_data['target_column'], test_size=0.2, random_state=42)
-            model = make_pipeline(CountVectorizer(), MultinomialNB())
-            model.fit(X_train, y_train)
-
-            # Predicting sentiment
-            sentiments = model.predict(reviews)
-
-            # Interpret sentiments
-            description, trend = interpret_sentiment(sentiments)
-
-            student_data = {
-                "Student": student,
-                "Overall Sentiment": overall_sentiment,
-                "Sentiment Description": description,
-                "Sentiment Trend": trend
-            }
-            all_students_data.append(student_data)
-
-        all_students_df = pd.DataFrame(all_students_data)
-        st.subheader("All Students Sentiment Analysis")
-        st.write(all_students_df)
-
-        # Function to convert DataFrame to CSV (for download)
-        def convert_df_to_csv(df):
-            return df.to_csv(index=False).encode('utf-8')
-
-        csv_data = convert_df_to_csv(all_students_df)
-
-        # Download button
-        st.download_button(
-            label="Download data as CSV",
-            data=csv_data,
-            file_name='students_sentiment_analysis.csv',
-            mime='text/csv',
-        )
-
-
-   
+        st.write("Columns mismatch. Please ensure the CSV file contains the required columns.")
