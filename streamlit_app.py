@@ -1,19 +1,20 @@
 import pandas as pd
+import streamlit as st
 import matplotlib.pyplot as plt
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import make_pipeline
-import streamlit as st
+import io
 
-# Download necessary NLTK data
+# Downloading necessary NLTK data
 nltk.download('vader_lexicon')
+
 
 class SentimentAnalyzer:
     def __init__(self):
         self.sia = SentimentIntensityAnalyzer()
-        self.clf = None
 
     def preprocess_text(self, text):
         if isinstance(text, str):
@@ -24,88 +25,113 @@ class SentimentAnalyzer:
     def train_classifier(self, reviews, labels):
         vectorizer = CountVectorizer(preprocessor=self.preprocess_text)
         X = vectorizer.fit_transform(reviews)
-        
+
         if X.shape[0] != len(labels):
             raise ValueError("Number of samples in features and labels must be the same.")
-        
+
         self.clf = MultinomialNB()
         self.clf.fit(X, labels)
         return make_pipeline(vectorizer, self.clf)
 
-    def analyze_sentiment(self, review):
-        return self.sia.polarity_scores(str(review))
+    def transform_scale(self, score):
+        return 5 * score + 5  # Convert the sentiment score from -1 to 1 scale to 0 to 10 scale
 
-# Streamlit UI setup
-st.title("Student Review Sentiment Analysis")
+    def analyze_sentiment(self, reviews):
+        sentiments = [{'compound': self.transform_scale(self.sia.polarity_scores(str(review))["compound"]),
+                       'pos': self.sia.polarity_scores(str(review))["pos"],
+                       'neu': self.sia.polarity_scores(str(review))["neu"],
+                       'neg': self.sia.polarity_scores(str(review))["neg"]}
+                      for review in reviews if isinstance(review, str)]
+        return sentiments
 
-# Load the dataset
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-if uploaded_file:
-    df = pd.read_csv(uploaded_file, encoding='utf-8')
-    st.write(df.head())  # Display the first few rows of the dataset
+    def calculate_overall_sentiment(self, reviews):
+        compound_scores = [self.sia.polarity_scores(str(review))["compound"] for review in reviews if
+                           isinstance(review, str)]
+        overall_sentiment = sum(compound_scores) / len(compound_scores) if compound_scores else 0
+        return self.transform_scale(overall_sentiment)
 
-    # Perform sentiment analysis
-    analyzer = SentimentAnalyzer()
+    def analyze_periodic_sentiment(self, reviews, period):
+        period_reviews = [' '.join(reviews[i:i + period]) for i in range(0, len(reviews), period)]
+        return self.analyze_sentiment(period_reviews)
 
-    # Columns to analyze
-    feedback_columns = ['teaching', 'library_facilities', 'examination', 'labwork', 'extracurricular', 'coursecontent']
-    sentiments = {column: [] for column in feedback_columns}
-
-    for column in feedback_columns:
-        if column in df.columns:
-            for review in df[column]:
-                sentiment = analyzer.analyze_sentiment(review)
-                sentiments[column].append(sentiment)
-
-    # Plotting sentiment analysis for all categories
-    fig, ax = plt.subplots(figsize=(12, 8))
-    colors = {'positive': 'green', 'neutral': 'blue', 'negative': 'red', 'overall': 'gray'}
-
-    for column in feedback_columns:
-        if column in sentiments:
-            scores = [s['compound'] for s in sentiments[column]]
-            pos_scores = [s['pos'] for s in sentiments[column]]
-            neu_scores = [s['neu'] * 0.5 for s in sentiments[column]]  # Scale down neutral scores
-            neg_scores = [s['neg'] for s in sentiments[column]]
-
-            ax.plot(scores, label=f"{column.capitalize()} - Overall", color=colors['overall'], linewidth=2)
-            ax.plot(pos_scores, label=f"{column.capitalize()} - Positive", color=colors['positive'], linestyle='dotted')
-            ax.plot(neu_scores, label=f"{column.capitalize()} - Neutral", color=colors['neutral'], linestyle='dashed', alpha=0.5)
-            ax.plot(neg_scores, label=f"{column.capitalize()} - Negative", color=colors['negative'], linestyle='dotted')
-
-    ax.set_xlabel('Review Index')
-    ax.set_ylabel('Sentiment Score')
-    ax.set_title('Sentiment Analysis')
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys())
-    st.pyplot(fig)
-
-    # Displaying overall sentiment descriptions
-    st.subheader("Overall Sentiment Descriptions")
-    for column in feedback_columns:
-        avg_sentiment = sum([s['compound'] for s in sentiments[column]]) / len(sentiments[column])
-        if avg_sentiment >= 0.65:
+    def interpret_sentiment(self, sentiments):
+        avg_sentiment = sum([sentiment['compound'] for sentiment in sentiments]) / len(sentiments) if sentiments else 0
+        if avg_sentiment >= 6.5:
             description = "Excellent progress, keep up the good work!"
-        elif avg_sentiment >= 0.62:
+        elif avg_sentiment >= 6.2:
             description = "Good progress, continue to work hard!"
         else:
             description = "Needs improvement, stay motivated and keep trying!"
-        st.write(f"**{column.capitalize()}**: {description}")
 
-    # Train Naive Bayes classifier
-    st.subheader("Naive Bayes Classifier")
-    reviews = df[feedback_columns].values.flatten().tolist()
-    labels = [1 if s['compound'] >= 0.65 else 0 for column in feedback_columns for s in sentiments[column]]
-    pipeline = analyzer.train_classifier(reviews, labels)
-    st.write("Classifier trained successfully.")
+        trend = "No change"
+        if len(sentiments) > 1:
+            first_half_avg = sum([sentiment['compound'] for sentiment in sentiments[:len(sentiments) // 2]]) / (
+                        len(sentiments) // 2)
+            second_half_avg = sum([sentiment['compound'] for sentiment in sentiments[len(sentiments) // 2:]]) / (
+                        len(sentiments) // 2)
+            if second_half_avg > first_half_avg:
+                trend = "Improving"
+            elif second_half_avg < first_half_avg:
+                trend = "Declining"
 
-    # Prediction on new data
-    test_reviews = st.text_area("Enter reviews for prediction (separate each review with a new line):")
-    if test_reviews:
-        test_reviews_list = test_reviews.split('\n')
-        predictions = pipeline.predict(test_reviews_list)
-        st.write("Predictions:")
-        st.write(predictions)
-else:
-    st.write("Please upload a CSV file to proceed.")
+        return description, trend
+
+
+st.title("Student Review Sentiment Analysis")
+
+# Upload CSV file
+uploaded_file = st.file_uploader("Upload your CSV file")
+
+if uploaded_file:
+    df = pd.read_csv(io.BytesIO(uploaded_file.read()), encoding='utf-8')
+    st.write(df.head())  # Debug statement to check the loaded data
+    analyzer = SentimentAnalyzer()
+    if 'teaching' in df.columns and 'coursecontent' in df.columns and 'examination' in df.columns and 'labwork' in df.columns and 'library_facilities' in df.columns and 'extracurricular' in df.columns:
+        review_columns = df.columns[1::2]
+        reviews = df[review_columns].values.flatten().tolist()
+
+        review_period = st.selectbox("Review Period:", [1, 4])
+
+        sentiments = []
+        if review_period == 1:
+            for review in reviews:
+                sentiments.extend(analyzer.analyze_sentiment([review]))
+        else:
+            for i in range(0, len(reviews), review_period):
+                sentiments.extend(analyzer.analyze_sentiment(reviews[i:i + review_period]))
+
+        overall_sentiment = analyzer.calculate_overall_sentiment(reviews)
+        st.subheader(f"Overall Sentiment: {overall_sentiment:.2f}")
+        st.subheader("Sentiment Analysis")
+
+        # Plotting sentiment
+        weeks = list(range(1, len(sentiments) + 1))
+        sentiment_scores = [sentiment['compound'] for sentiment in sentiments]
+        pos_scores = [sentiment['pos'] for sentiment in sentiments]
+        neu_scores = [sentiment['neu'] for sentiment in sentiments]
+        neg_scores = [sentiment['neg'] for sentiment in sentiments]
+
+        fig, ax = plt.subplots()
+        ax.plot(weeks, sentiment_scores, label="Overall", color="blue")
+        ax.fill_between(weeks, sentiment_scores, color="blue", alpha=0.1)
+        ax.plot(weeks, pos_scores, label="Positive", color="green")
+        ax.plot(weeks, neu_scores, label="Neutral", color="gray")
+        ax.plot(weeks, neg_scores, label="Negative", color="red")
+
+        ax.set_xlabel('Week')
+        ax.set_ylabel('Sentiment Score')
+        ax.set_title('Sentiment Analysis')
+        ax.legend()
+        st.pyplot(fig)
+
+        description, trend = analyzer.interpret_sentiment(sentiments)
+        st.subheader("Progress Description")
+        st.write(f"Sentiment Trend: {trend}")
+        st.write(f"Description: {description}")
+
+        # Breakdown of analysis
+        st.subheader("Breakdown of Analysis")
+        breakdown_df = pd.DataFrame(sentiments, index=list(range(1, len(sentiments) + 1)))
+        st.write(breakdown_df)
+    else:
+        st.write("Columns mismatch. Please ensure the CSV file contains the required columns.")
