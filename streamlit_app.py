@@ -57,7 +57,7 @@ if uploaded_file:
                 sentiment = analyzer.analyze_sentiment(review)
                 sentiments[column].append(sentiment)
 
-    # Plotting sentiment analysis for all categories
+    # Plotting sentiment analysis for overall category
     fig, ax = plt.subplots(figsize=(12, 8))
     colors = {'positive': 'green', 'neutral': 'blue', 'negative': 'red', 'overall': 'gray'}
 
@@ -68,10 +68,11 @@ if uploaded_file:
             neu_scores = [s['neu'] * 0.5 for s in sentiments[column]]  # Scale down neutral scores
             neg_scores = [s['neg'] for s in sentiments[column]]
 
+            # Print scores for debugging
+            st.write(f"{column.capitalize()} Scores:", scores)
+
+            # Plot overall sentiment scores
             ax.plot(scores, label=f"{column.capitalize()} - Overall", color=colors['overall'], linewidth=2)
-            ax.plot(pos_scores, label=f"{column.capitalize()} - Positive", color=colors['positive'], linestyle='dotted')
-            ax.plot(neu_scores, label=f"{column.capitalize()} - Neutral", color=colors['neutral'], linestyle='dashed', alpha=0.5)
-            ax.plot(neg_scores, label=f"{column.capitalize()} - Negative", color=colors['negative'], linestyle='dotted')
 
     ax.set_xlabel('Review Index')
     ax.set_ylabel('Sentiment Score')
