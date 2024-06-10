@@ -7,7 +7,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import make_pipeline
 import streamlit as st
 
-# Downloading necessary NLTK data
+# Download necessary NLTK data
 nltk.download('vader_lexicon')
 
 class SentimentAnalyzer:
@@ -33,46 +33,55 @@ class SentimentAnalyzer:
         return make_pipeline(vectorizer, self.clf)
 
     def analyze_sentiment(self, review):
-        sentiment_score = self.sia.polarity_scores(str(review))["compound"]
-        return sentiment_score
+        return self.sia.polarity_scores(str(review))
 
-# Update Streamlit UI setup
+# Streamlit UI setup
 st.title("Student Review Sentiment Analysis")
 
 # Load the dataset
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 if uploaded_file:
     df = pd.read_csv(uploaded_file, encoding='utf-8')
-    st.write(df.head())  # Debug statement to check the loaded data
+    st.write(df.head())  # Display the first few rows of the dataset
 
     # Perform sentiment analysis
     analyzer = SentimentAnalyzer()
 
     # Columns to analyze
     feedback_columns = ['teaching', 'library_facilities', 'examination', 'labwork', 'extracurricular', 'coursecontent']
-    sentiments = {}
+    sentiments = {column: [] for column in feedback_columns}
 
     for column in feedback_columns:
         if column in df.columns:
-            sentiments[column] = df[column].apply(analyzer.analyze_sentiment)
-
-    overall_sentiments = {column: sum(sentiments[column]) / len(sentiments[column]) for column in feedback_columns}
+            for review in df[column]:
+                sentiment = analyzer.analyze_sentiment(review)
+                sentiments[column].append(sentiment)
 
     # Plotting sentiment analysis for all categories
-    fig, ax = plt.subplots()
-    categories = list(overall_sentiments.keys())
-    sentiment_scores = list(overall_sentiments.values())
+    fig, ax = plt.subplots(figsize=(10, 6))
+    colors = {'positive': 'green', 'neutral': 'gray', 'negative': 'red', 'overall': 'blue'}
 
-    ax.bar(categories, sentiment_scores, color=['blue', 'green', 'gray', 'red', 'purple', 'orange'])
-    ax.set_xlabel('Feedback Categories')
+    for column in feedback_columns:
+        scores = [s['compound'] for s in sentiments[column]]
+        pos_scores = [s['pos'] for s in sentiments[column]]
+        neu_scores = [s['neu'] for s in sentiments[column]]
+        neg_scores = [s['neg'] for s in sentiments[column]]
+
+        ax.plot(scores, label=f"{column.capitalize()} - Overall", color=colors['overall'])
+        ax.plot(pos_scores, label=f"{column.capitalize()} - Positive", color=colors['positive'])
+        ax.plot(neu_scores, label=f"{column.capitalize()} - Neutral", color=colors['neutral'])
+        ax.plot(neg_scores, label=f"{column.capitalize()} - Negative", color=colors['negative'])
+
+    ax.set_xlabel('Review Index')
     ax.set_ylabel('Sentiment Score')
-    ax.set_title('Overall Sentiment Analysis for Feedback Categories')
+    ax.set_title('Sentiment Analysis')
+    ax.legend()
     st.pyplot(fig)
 
-    # Displaying descriptions
+    # Displaying overall sentiment descriptions
     st.subheader("Overall Sentiment Descriptions")
     for column in feedback_columns:
-        avg_sentiment = sum(sentiments[column]) / len(sentiments[column])
+        avg_sentiment = sum([s['compound'] for s in sentiments[column]]) / len(sentiments[column])
         if avg_sentiment >= 0.65:
             description = "Excellent progress, keep up the good work!"
         elif avg_sentiment >= 0.62:
@@ -84,7 +93,7 @@ if uploaded_file:
     # Train Naive Bayes classifier
     st.subheader("Naive Bayes Classifier")
     reviews = df[feedback_columns].values.flatten().tolist()
-    labels = [1 if sentiment >= 0.65 else 0 for sublist in sentiments.values() for sentiment in sublist]
+    labels = [1 if s['compound'] >= 0.65 else 0 for column in feedback_columns for s in sentiments[column]]
     pipeline = analyzer.train_classifier(reviews, labels)
     st.write("Classifier trained successfully.")
 
