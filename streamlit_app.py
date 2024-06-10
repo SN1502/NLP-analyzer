@@ -57,28 +57,22 @@ if uploaded_file:
                 sentiment = analyzer.analyze_sentiment(review)
                 sentiments[column].append(sentiment)
 
-    # Plotting sentiment analysis for all categories
+    # Plotting overall sentiment analysis
     fig, ax = plt.subplots(figsize=(12, 8))
-    colors = {'positive': 'green', 'neutral': 'gray', 'negative': 'red', 'overall': 'blue'}
-
+    overall_scores = []
+    
     for column in feedback_columns:
         if column in sentiments:
             scores = [s['compound'] for s in sentiments[column]]
-            pos_scores = [s['pos'] for s in sentiments[column]]
-            neu_scores = [s['neu'] * 0.5 for s in sentiments[column]]  # Scale down neutral scores
-            neg_scores = [s['neg'] for s in sentiments[column]]
-
-            ax.plot(scores, label=f"{column.capitalize()} - Overall", color=colors['overall'], linewidth=2)
-            ax.plot(pos_scores, label=f"{column.capitalize()} - Positive", color=colors['positive'], linestyle='dotted')
-            ax.plot(neu_scores, label=f"{column.capitalize()} - Neutral", color=colors['neutral'], linestyle='dashed', alpha=0.5)
-            ax.plot(neg_scores, label=f"{column.capitalize()} - Negative", color=colors['negative'], linestyle='dotted')
+            overall_scores.extend(scores)
+    
+    overall_scores.sort()
+    ax.plot(overall_scores, label="Overall", color='blue', linewidth=2)
 
     ax.set_xlabel('Review Index')
     ax.set_ylabel('Sentiment Score')
-    ax.set_title('Sentiment Analysis')
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys())
+    ax.set_title('Overall Sentiment Analysis')
+    ax.legend()
     st.pyplot(fig)
 
     # Displaying overall sentiment descriptions
