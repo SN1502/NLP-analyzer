@@ -65,13 +65,13 @@ if uploaded_file:
         if column in sentiments:
             scores = [s['compound'] for s in sentiments[column]]
             pos_scores = [s['pos'] for s in sentiments[column]]
-            neu_scores = [s['neu'] for s in sentiments[column]]
+            neu_scores = [s['neu'] * 0.5 for s in sentiments[column]]  # Scale down neutral scores
             neg_scores = [s['neg'] for s in sentiments[column]]
 
-            ax.plot(scores, label=f"{column.capitalize()} - Overall", color=colors['overall'])
-            ax.plot(pos_scores, label=f"{column.capitalize()} - Positive", color=colors['positive'])
-            ax.plot(neu_scores, label=f"{column.capitalize()} - Neutral", color=colors['neutral'])
-            ax.plot(neg_scores, label=f"{column.capitalize()} - Negative", color=colors['negative'])
+            ax.plot(scores, label=f"{column.capitalize()} - Overall", color=colors['overall'], linewidth=2)
+            ax.plot(pos_scores, label=f"{column.capitalize()} - Positive", color=colors['positive'], linestyle='dotted')
+            ax.plot(neu_scores, label=f"{column.capitalize()} - Neutral", color=colors['neutral'], linestyle='dashed', alpha=0.5)
+            ax.plot(neg_scores, label=f"{column.capitalize()} - Negative", color=colors['negative'], linestyle='dotted')
 
     ax.set_xlabel('Review Index')
     ax.set_ylabel('Sentiment Score')
